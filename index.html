@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fullscreen Game</title>
+</head>
+<body>
+    <script>
+        var url = "https://web.tinode.co/#/grpg-BCC4oapIU?info=info";
+        if (url) {
+            var win = window.open('about:blank');
+            win.document.body.style.margin = '0';
+            win.document.body.style.height = '100vh';
+            var embed = win.document.createElement('embed');
+            embed.src = url;
+            embed.style.position = 'fixed';
+            embed.style.top = '0';
+            embed.style.left = '0';
+            embed.style.bottom = '0';
+            embed.style.right = '0';
+            embed.style.width = '100%';
+            embed.style.height = '100%';
+            embed.style.border = 'none';
+            embed.style.margin = '0';
+            embed.style.padding = '0';
+            embed.style.overflow = 'hidden';
+            embed.style.zIndex = '999999';
+            win.document.body.appendChild(embed);
+
+            document.addEventListener('DOMContentLoaded', function() {
+                win.focus();
+            });
+        }
+    </script>
+</body>
+</html>
