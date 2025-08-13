@@ -3,35 +3,306 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blocksi</title>
+    <title>Secure Portal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        #launchBtn {
+            background-color: #4CAF50;
+            color: white;
+            min-width: 150px;
+        }
+        
+        #launchBtn:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        #logoutBtn {
+            background-color: #f44336;
+            color: white;
+            min-width: 150px;
+            display: none;
+        }
+        
+        #logoutBtn:hover {
+            background-color: #d32f2f;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .login-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 350px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .login-container h2 {
+            margin-top: 0;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .login-container input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        
+        .login-container button {
+            width: 100%;
+            padding: 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        
+        .login-container button:hover {
+            background: #45a049;
+        }
+        
+        .error-message {
+            color: #f44336;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .status-message {
+            margin-top: 20px;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
-    <script>
-        var url = "https://web.tinode.co/#/grpg-BCC4oapIU?info=info";
-        if (url) {
-            var win = window.open('about:blank');
-            win.document.body.style.margin = '0';
-            win.document.body.style.height = '100vh';
-            var embed = win.document.createElement('embed');
-            embed.src = url;
-            embed.style.position = 'fixed';
-            embed.style.top = '0';
-            embed.style.left = '0';
-            embed.style.bottom = '0';
-            embed.style.right = '0';
-            embed.style.width = '100%';
-            embed.style.height = '100%';
-            embed.style.border = 'none';
-            embed.style.margin = '0';
-            embed.style.padding = '0';
-            embed.style.overflow = 'hidden';
-            embed.style.zIndex = '999999';
-            win.document.body.appendChild(embed);
+    <div class="container">
+        <h1>Secure Portal</h1>
+        <p class="status-message" id="statusMsg">Please login to access the portal</p>
+        
+        <div class="button-group">
+            <button id="launchBtn">Open Portal</button>
+            <button id="logoutBtn">Logout</button>
+        </div>
+    </div>
+    
+    <!-- Login Modal -->
+    <div id="loginModal" class="login-modal">
+        <div class="login-container">
+            <h2>Login Required</h2>
+            <input type="text" id="username" placeholder="Username" autocomplete="username">
+            <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+            <div class="error-message" id="errorMsg">Invalid username or password</div>
+            <button id="loginBtn">Login</button>
+        </div>
+    </div>
 
-            document.addEventListener('DOMContentLoaded', function() {
-                win.focus();
+    <script>
+        (function() {
+            // Configuration
+            const config = {
+                correctUsername: "admin",
+                correctPassword: "password123",
+                storageKey: "portal_auth_token",
+                targetUrl: "https://web.tinode.co/#/grpg-BCC4oapIU?info=info"
+            };
+
+            // DOM Elements
+            const loginModal = document.getElementById('loginModal');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const loginBtn = document.getElementById('loginBtn');
+            const errorMsg = document.getElementById('errorMsg');
+            const launchBtn = document.getElementById('launchBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const statusMsg = document.getElementById('statusMsg');
+
+            // Track the portal window
+            let portalWindow = null;
+
+            // Check authentication status
+            function checkAuth() {
+                const authData = localStorage.getItem(config.storageKey);
+                if (!authData) return false;
+
+                try {
+                    const { username, password } = JSON.parse(authData);
+                    return username === config.correctUsername && password === config.correctPassword;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            // Show login modal
+            function showLogin() {
+                loginModal.style.display = 'flex';
+                usernameInput.focus();
+            }
+
+            // Hide login modal
+            function hideLogin() {
+                loginModal.style.display = 'none';
+                errorMsg.style.display = 'none';
+                usernameInput.value = '';
+                passwordInput.value = '';
+            }
+
+            // Handle login
+            function handleLogin() {
+                const username = usernameInput.value.trim();
+                const password = passwordInput.value;
+
+                if (username === config.correctUsername && password === config.correctPassword) {
+                    localStorage.setItem(config.storageKey, JSON.stringify({
+                        username,
+                        password
+                    }));
+                    hideLogin();
+                    updateUI();
+                } else {
+                    errorMsg.style.display = 'block';
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                }
+            }
+
+            // Update UI based on auth status
+            function updateUI() {
+                if (checkAuth()) {
+                    logoutBtn.style.display = 'block';
+                    launchBtn.textContent = 'Open Portal';
+                    statusMsg.textContent = 'You are logged in. Click "Open Portal" to continue.';
+                    statusMsg.style.color = '#4CAF50';
+                } else {
+                    logoutBtn.style.display = 'none';
+                    launchBtn.textContent = 'Login';
+                    statusMsg.textContent = 'Please login to access the portal';
+                    statusMsg.style.color = '#666';
+                }
+            }
+
+            // Open the portal in about:blank (original behavior)
+            function openPortal() {
+                if (!checkAuth()) {
+                    showLogin();
+                    return;
+                }
+
+                // Close existing portal if open
+                if (portalWindow && !portalWindow.closed) {
+                    portalWindow.close();
+                }
+
+                // Execute the original about:blank code
+                portalWindow = window.open('about:blank');
+                portalWindow.document.body.style.margin = '0';
+                portalWindow.document.body.style.height = '100vh';
+                
+                var embed = portalWindow.document.createElement('embed');
+                embed.src = config.targetUrl;
+                embed.style.position = 'fixed';
+                embed.style.top = '0';
+                embed.style.left = '0';
+                embed.style.bottom = '0';
+                embed.style.right = '0';
+                embed.style.width = '100%';
+                embed.style.height = '100%';
+                embed.style.border = 'none';
+                embed.style.margin = '0';
+                embed.style.padding = '0';
+                embed.style.overflow = 'hidden';
+                embed.style.zIndex = '999999';
+                portalWindow.document.body.appendChild(embed);
+
+                portalWindow.document.addEventListener('DOMContentLoaded', function() {
+                    portalWindow.focus();
+                });
+            }
+
+            // Handle logout
+            function handleLogout() {
+                localStorage.removeItem(config.storageKey);
+                if (portalWindow && !portalWindow.closed) {
+                    portalWindow.close();
+                }
+                updateUI();
+            }
+
+            // Event Listeners
+            loginBtn.addEventListener('click', handleLogin);
+            launchBtn.addEventListener('click', openPortal);
+            logoutBtn.addEventListener('click', handleLogout);
+            
+            passwordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleLogin();
+                }
             });
-        }
+
+            // Initialize
+            updateUI();
+        })();
     </script>
 </body>
 </html>
